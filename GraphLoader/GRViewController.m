@@ -67,11 +67,23 @@
         case UIGestureRecognizerStateBegan: {
             CGPoint center = [recognizer locationInView:self.view];
             GRBubble *bubble = [[GRBubble alloc] initWithFrame:CGRectMake(center.x - DEFAULT_TOUCH_SIZE/2, center.y - DEFAULT_TOUCH_SIZE/2, DEFAULT_TOUCH_SIZE, DEFAULT_TOUCH_SIZE)];
-            bubble.layer.masksToBounds = YES;
-            bubble.status = GRBubbleExpanding;
-            bubble.layer.borderColor = CORAL.CGColor; bubble.layer.borderWidth = BORDER_WIDTH; bubble.layer.cornerRadius = bubble.frame.size.width/2;
-            [self.view addSubview:bubble];
-            [_bubbles addObject:bubble];
+            __block BOOL intersection= NO;
+            [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+                if (bubble != otherBubble) {
+                    //check if intersection with anyother bubble
+                    if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
+                        intersection = YES;
+                        *stop = YES;
+                    }
+                }
+            }];
+            if (!intersection) {
+                bubble.layer.masksToBounds = YES;
+                bubble.status = GRBubbleExpanding;
+                bubble.layer.borderColor = CORAL.CGColor; bubble.layer.borderWidth = BORDER_WIDTH; bubble.layer.cornerRadius = bubble.frame.size.width/2;
+                [self.view addSubview:bubble];
+                [_bubbles addObject:bubble];
+            }
             break;
         }
         case UIGestureRecognizerStateEnded: {
@@ -117,15 +129,23 @@
         else if (bubble.status == GRBubbleFalling) {
             //either falling or bouncing around
             __block BOOL intersection= NO;
-            [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
-                if (bubble != otherBubble) {
-                    //check if intersection with anyother bubble
-                    if ([self bubble:bubble intersects:otherBubble elasticCollision:YES]) {
-                        intersection = YES;
-                        *stop = YES;
+            __block BOOL restart = YES;
+            __block int retries = 3;
+            while (_bubbles.count > 1 && restart && retries > 0) {
+                [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+                    if (bubble != otherBubble) {
+                        //check if intersection with anyother bubble
+                        if ([self bubble:bubble intersects:otherBubble elasticCollision:YES]) {
+                            intersection = YES;
+                            restart = YES;
+                            retries--;
+                            *stop = YES;
+                        }
+                        else restart = NO;
                     }
-                }
-            }];
+                }];
+            }
+            
             if (intersection) {
                 bubble.status = GRBubbleStill;
 
@@ -156,17 +176,24 @@
         float newHypotenuse = bubbleRadius + otherBubbleRadius;
         //find angle and extrapolate
         CGFloat angle = asin((otherBubbleCenter.y - bubbleCenter.y)/hypotenuse);
-        NSLog(@"angle:%f", angle * 57.2957795);
-        NSLog(@"cos:%f", cosf(angle));
-        NSLog(@"sin:%f", sinf(angle));
         float dx = newHypotenuse * cosf(angle); // the new horizontal leg length
         float dy = newHypotenuse * sinf(angle); // the new vertical leg length
+        
         NSLog(@"dx:%f", dx);
         NSLog(@"dy:%f", dy);
-        [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:(newHypotenuse - hypotenuse)/10 options:UIViewAnimationOptionCurveEaseOut animations:^{
-            bubble.center = CGPointMake(otherBubbleCenter.x - dx * (bubbleCenter.x > otherBubbleCenter.x ? -1: 1), otherBubbleCenter.y - dy);
-        } completion:nil];
-        bubble.status = GRBubbleStill;
+        //TODO:fix this NaN issue, in other words, stop it from ever happening
+        if (!(isnan(dx) || isnan(dy))) {
+            NSLog(@"valid");
+            [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:(newHypotenuse - hypotenuse)/10 options:UIViewAnimationOptionCurveEaseOut animations:^{
+                bubble.center = CGPointMake(otherBubbleCenter.x - dx * (bubbleCenter.x > otherBubbleCenter.x ? -1: 1), otherBubbleCenter.y - dy);
+            } completion:nil];
+            bubble.status = GRBubbleStill;
+        }
+        else {
+            [bubble removeFromSuperview];
+            [_bubbles removeObject:bubble];
+        }
+        
         
         
     }
