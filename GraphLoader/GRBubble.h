@@ -7,11 +7,11 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "GRForce.h"
 
 typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
     GRBubbleExpanding,
-    GRBubbleFalling,
-    GRBubbleStill
+    GRBubbleFalling
 };
 
 
@@ -19,4 +19,8 @@ typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
 @interface GRBubble : UIView
 @property (nonatomic, assign) GRBubbleStatus status;
 @property (nonatomic, assign) float radius;
+@property (nonatomic, strong) NSArray *forces;
+@property (nonatomic, strong) GRForce *weight;
+
+- (GRForce *)getNetForce;
 @end

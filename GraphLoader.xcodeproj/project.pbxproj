@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9E43F6CA1965B0CF0025A2FA /* GRForce.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E43F6C91965B0CF0025A2FA /* GRForce.m */; };
 		9EDE490E1965418100994D55 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9EDE490D1965418100994D55 /* Foundation.framework */; };
 		9EDE49101965418100994D55 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9EDE490F1965418100994D55 /* CoreGraphics.framework */; };
 		9EDE49121965418100994D55 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9EDE49111965418100994D55 /* UIKit.framework */; };
@@ -36,6 +37,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		9E43F6C81965B0CF0025A2FA /* GRForce.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GRForce.h; sourceTree = "<group>"; };
+		9E43F6C91965B0CF0025A2FA /* GRForce.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GRForce.m; sourceTree = "<group>"; };
 		9EDE490A1965418100994D55 /* GraphLoader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GraphLoader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EDE490D1965418100994D55 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9EDE490F1965418100994D55 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -124,6 +127,8 @@
 				9EDE49231965418100994D55 /* GRViewController.m */,
 				9EDE4944196566AC00994D55 /* GRBubble.h */,
 				9EDE4945196566AC00994D55 /* GRBubble.m */,
+				9E43F6C81965B0CF0025A2FA /* GRForce.h */,
+				9E43F6C91965B0CF0025A2FA /* GRForce.m */,
 				9EDE49251965418100994D55 /* Images.xcassets */,
 				9EDE4942196541A900994D55 /* loading@2x.png */,
 				9EDE49141965418100994D55 /* Supporting Files */,
@@ -260,6 +265,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9EDE491A1965418100994D55 /* main.m in Sources */,
+				9E43F6CA1965B0CF0025A2FA /* GRForce.m in Sources */,
 				9EDE49241965418100994D55 /* GRViewController.m in Sources */,
 				9EDE4946196566AC00994D55 /* GRBubble.m in Sources */,
 				9EDE491E1965418100994D55 /* GRAppDelegate.m in Sources */,
@@ -467,6 +473,7 @@
 				9EDE493E1965418100994D55 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		9EDE493F1965418100994D55 /* Build configuration list for PBXNativeTarget "GraphLoaderTests" */ = {
 			isa = XCConfigurationList;
@@ -475,6 +482,7 @@
 				9EDE49411965418100994D55 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -9,12 +9,18 @@
 #import "GRViewController.h"
 
 #import "GRBubble.h"
+#import "GRForce.h"
 
 #define CORAL [UIColor colorWithRed:1 green:136/255.0 blue:125/255.0 alpha:1]
 #define OFFWHITE [UIColor colorWithRed:247/255.0 green:247/255.0 blue:247/255.0 alpha:1]
 #define DEFAULT_TOUCH_SIZE 40
 #define RATE_OF_EXPANSION -1
 #define BORDER_WIDTH 6
+#define TO_DEGREES(radians) radians * 57.2957795
+
+#define HYPOTENUSE(bubbleCenter, otherBubbleCenter) sqrtf(powf(bubbleCenter.x - otherBubbleCenter.x, 2) + powf(bubbleCenter.y - otherBubbleCenter.y, 2))
+#define ANGLE(otherBubbleCenter, bubbleCenter, hypotenuse) asin((otherBubbleCenter.y - bubbleCenter.y)/hypotenuse);
+
 
 @interface GRViewController ()
 @property (nonatomic, strong) CADisplayLink *displayLink;
@@ -105,6 +111,7 @@
 
 
 - (void)animate {
+    //sort all the bubbles out
     NSArray *reversedBubbles = [[_bubbles reverseObjectEnumerator] allObjects];
     [reversedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
         if (bubble.status == GRBubbleExpanding) {
@@ -134,7 +141,7 @@
             // bubble is falling
             __block BOOL intersection= NO;
             __block BOOL restart = YES;
-            __block int retries = 3; //prevent from getting stuck
+            __block int retries = 2; //prevent from getting stuck
             while (_bubbles.count > 1 && restart && retries > 0) {
                 [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                     if (bubble != otherBubble) {
@@ -150,22 +157,42 @@
                 }];
             }
             
-            if (intersection) {
-                bubble.status = GRBubbleStill;
-
-            }
-            else if (bubble.center.y + bubble.frame.size.height/2 > self.view.frame.size.height) {
+            if (bubble.center.y + bubble.frame.size.height/2 > self.view.frame.size.height) {
                 [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
                     bubble.frame = CGRectMake(bubble.frame.origin.x, self.view.frame.size.height - bubble.frame.size.height, bubble.frame.size.width, bubble.frame.size.height);
                 } completion:nil];
-                bubble.status = GRBubbleStill;
             }
-            else {
-                bubble.center = CGPointMake(bubble.center.x, bubble.center.y + [self gravity:bubble]);
-            }
+            NSMutableArray *forces = [[NSMutableArray alloc] initWithCapacity:_bubbles.count];
+            [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+                if (bubble != otherBubble && otherBubble.status == GRBubbleFalling) {
+                    if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
+                        //add forces
+                        CGPoint bubbleCenter = bubble.center;
+                        CGPoint otherBubbleCenter = otherBubble.center;
+                        float hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
+                        CGFloat angle = ANGLE(otherBubbleCenter, bubbleCenter, hypotenuse);
+                        CGFloat theta = M_PI_2 - angle;
+                        float hf = bubble.weight.magnitude * cos(angle);
+                        GRForce *force = [GRForce forceWithMagnitude:hf direction:TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0)];
+                        [forces addObject:force];
+                    }
+                }
+            }];
+            bubble.forces = (NSArray *)forces;
 
         }
+        
     }];
+    
+    //sum up all forces
+    [_bubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
+        if (bubble.status == GRBubbleFalling) {
+            GRForce *netForce = [bubble getNetForce];
+            bubble.center = CGPointMake(bubble.center.x + netForce.dx, bubble.center.y + netForce.dy);
+        }
+    }];
+    
+    
     //equate weight
 //    _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
 //    for (int i = 0; i < _sortedBubbles.count - 1; i++) {
@@ -182,12 +209,12 @@
     float bubbleRadius = bubble.radius;
     float otherBubbleRadius = otherBubble.radius;
     //find hypotenuse
-    float hypotenuse = sqrtf(powf(bubbleCenter.x - otherBubbleCenter.x, 2) + powf(bubbleCenter.y - otherBubbleCenter.y, 2));
+    float hypotenuse = HYPOTENUSE(bubbleCenter, otherBubbleCenter);
     BOOL intersect = hypotenuse < bubbleRadius + otherBubbleRadius;
     if (intersect && elasticCollision) {
         float newHypotenuse = bubbleRadius + otherBubbleRadius;
         //find angle and extrapolate
-        CGFloat angle = asin((otherBubbleCenter.y - bubbleCenter.y)/hypotenuse);
+        CGFloat angle = ANGLE(otherBubbleCenter, bubbleCenter, hypotenuse);
         float dx = newHypotenuse * cosf(angle); // the new horizontal leg length
         float dy = newHypotenuse * sinf(angle); // the new vertical leg length
 //        NSLog(@"dx:%f", dx);
@@ -198,7 +225,7 @@
             [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:(newHypotenuse - hypotenuse)/10 options:UIViewAnimationOptionCurveEaseOut animations:^{
                 bubble.center = CGPointMake(otherBubbleCenter.x - dx * (bubbleCenter.x > otherBubbleCenter.x ? -1: 1), otherBubbleCenter.y - dy);
             } completion:nil];
-            bubble.status = GRBubbleStill;
+//            bubble.status = GRBubbleStill;
         }
         else {
             [bubble removeFromSuperview];
