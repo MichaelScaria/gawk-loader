@@ -9,5 +9,11 @@
 #import "GRBubble.h"
 
 @implementation GRBubble
+- (NSComparisonResult)compareHeight:(GRBubble *)otherBubble {
+    return self.center.y < otherBubble.center.y;
+}
 
+- (float)radius {
+    return self.frame.size.width/2 - (self.layer.borderWidth - 3);
+}
 @end

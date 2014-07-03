@@ -19,6 +19,7 @@
 @interface GRViewController ()
 @property (nonatomic, strong) CADisplayLink *displayLink;
 @property (nonatomic, strong) NSMutableArray *bubbles;
+//@property (nonatomic, strong) NSMutableArray *sortedBubbles;
 @property (nonatomic, strong) GRBubble *loaderView;
 
 //@property (nonatomic, strong) UIDynamicAnimator *animator;
@@ -33,6 +34,7 @@
 {
     [super viewDidLoad];
     _bubbles = [[NSMutableArray alloc] init];
+//    _sortedBubbles = [[NSMutableArray alloc] init];
     self.view.backgroundColor = OFFWHITE;
     int viewSize = 170;
     _loaderView = [[GRBubble alloc] initWithFrame:CGRectMake(0, 0, viewSize, viewSize)];
@@ -43,7 +45,8 @@
     _loaderView.layer.masksToBounds = YES;
     [self.view addSubview:_loaderView];
     [_bubbles addObject:_loaderView];
-    
+//    [_sortedBubbles addObject:_loaderView];
+
     UILongPressGestureRecognizer *recognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(createBubble:)];
     recognizer.minimumPressDuration = .05;
     [self.view addGestureRecognizer:recognizer];
@@ -83,6 +86,7 @@
                 bubble.layer.borderColor = CORAL.CGColor; bubble.layer.borderWidth = BORDER_WIDTH; bubble.layer.cornerRadius = bubble.frame.size.width/2;
                 [self.view addSubview:bubble];
                 [_bubbles addObject:bubble];
+//                [_sortedBubbles addObject:bubble];
             }
             break;
         }
@@ -127,14 +131,14 @@
             
         }
         else if (bubble.status == GRBubbleFalling) {
-            //either falling or bouncing around
+            // bubble is falling
             __block BOOL intersection= NO;
             __block BOOL restart = YES;
-            __block int retries = 3;
+            __block int retries = 3; //prevent from getting stuck
             while (_bubbles.count > 1 && restart && retries > 0) {
                 [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                     if (bubble != otherBubble) {
-                        //check if intersection with anyother bubble
+                        //check if intersection with any other bubble
                         if ([self bubble:bubble intersects:otherBubble elasticCollision:YES]) {
                             intersection = YES;
                             restart = YES;
@@ -162,13 +166,21 @@
 
         }
     }];
+    //equate weight
+//    _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
+//    for (int i = 0; i < _sortedBubbles.count - 1; i++) {
+//        GRBubble *bubble = _sortedBubbles[i];
+//        GRBubble *otherBubble = _sortedBubbles[i+1];
+//        [self distributeBubbleWeight:bubble otherBubble:otherBubble];
+//    }
+
 }
 
 - (BOOL)bubble:(GRBubble *)bubble intersects:(GRBubble *)otherBubble elasticCollision:(BOOL)elasticCollision {
     CGPoint bubbleCenter = bubble.center;
     CGPoint otherBubbleCenter = otherBubble.center;
-    float bubbleRadius = bubble.frame.size.width/2 - BORDER_WIDTH/2;
-    float otherBubbleRadius = otherBubble.frame.size.width/2 - BORDER_WIDTH/2;
+    float bubbleRadius = bubble.radius;
+    float otherBubbleRadius = otherBubble.radius;
     //find hypotenuse
     float hypotenuse = sqrtf(powf(bubbleCenter.x - otherBubbleCenter.x, 2) + powf(bubbleCenter.y - otherBubbleCenter.y, 2));
     BOOL intersect = hypotenuse < bubbleRadius + otherBubbleRadius;
@@ -178,12 +190,11 @@
         CGFloat angle = asin((otherBubbleCenter.y - bubbleCenter.y)/hypotenuse);
         float dx = newHypotenuse * cosf(angle); // the new horizontal leg length
         float dy = newHypotenuse * sinf(angle); // the new vertical leg length
-        
-        NSLog(@"dx:%f", dx);
-        NSLog(@"dy:%f", dy);
+//        NSLog(@"dx:%f", dx);
+//        NSLog(@"dy:%f", dy);
         //TODO:fix this NaN issue, in other words, stop it from ever happening
         if (!(isnan(dx) || isnan(dy))) {
-            NSLog(@"valid");
+            
             [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:(newHypotenuse - hypotenuse)/10 options:UIViewAnimationOptionCurveEaseOut animations:^{
                 bubble.center = CGPointMake(otherBubbleCenter.x - dx * (bubbleCenter.x > otherBubbleCenter.x ? -1: 1), otherBubbleCenter.y - dy);
             } completion:nil];
@@ -192,6 +203,7 @@
         else {
             [bubble removeFromSuperview];
             [_bubbles removeObject:bubble];
+//            [_sortedBubbles addObject:bubble];
         }
         
         
@@ -201,9 +213,34 @@
     return intersect;
 }
 
+//- (void)distributeBubbleWeight:(GRBubble *)bubble otherBubble:(GRBubble *)otherBubble {
+//    CGPoint bubbleCenter = bubble.center;
+//    CGPoint otherBubbleCenter = otherBubble.center;
+//    float bubbleRadius = bubble.radius;
+//    float otherBubbleRadius = otherBubble.radius;
+//    //find hypotenuse
+//    float hypotenuse = sqrtf(powf(bubbleCenter.x - otherBubbleCenter.x, 2) + powf(bubbleCenter.y - otherBubbleCenter.y, 2));
+//    BOOL intersect = hypotenuse < bubbleRadius + otherBubbleRadius;
+//    if (intersect) {
+//        otherBubble.status = GRBubbleFalling;
+//        CGFloat angle = MIN(asin((bubbleCenter.y - otherBubbleCenter.y)/hypotenuse), .15); //make sure vertical leg is postiive
+//        NSLog(@"angle:%f", angle);
+//        NSAssert(angle > 0, @"Bubbles not sorted properly");
+//        CGFloat newAngle = MIN(pow(angle, 1.001), (int)M_PI_2);
+//        float dx = hypotenuse * cosf(newAngle); // the new horizontal leg length
+//        float dy = hypotenuse * sinf(newAngle); // the new vertical leg length
+//        otherBubble.center = CGPointMake(bubbleCenter.x - dx * (otherBubbleCenter.x > bubbleCenter.x ? -1: 1), bubbleCenter.y - dy );
+//
+//    }
+//    
+//    
+//    
+//}
+
 - (float)gravity:(GRBubble *)bubble {
     float distanceToBottom = self.view.frame.size.height - (bubble.center.y + bubble.frame.size.height/2);
     //tested values
+    //TODO:take into account radius
     return 500/(.25 * (distanceToBottom + 25)) - 7 * -1;
 }
 

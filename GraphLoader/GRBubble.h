@@ -18,4 +18,5 @@ typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
 
 @interface GRBubble : UIView
 @property (nonatomic, assign) GRBubbleStatus status;
+@property (nonatomic, assign) float radius;
 @end
