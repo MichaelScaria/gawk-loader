@@ -14,7 +14,7 @@
 #define OFFWHITE [UIColor colorWithRed:247/255.0 green:247/255.0 blue:247/255.0 alpha:1]
 #define DEFAULT_TOUCH_SIZE 40
 #define RATE_OF_EXPANSION -1
-#define SECONDS_PER_PIXEL .001
+#define BORDER_WIDTH 6
 
 @interface GRViewController ()
 @property (nonatomic, strong) CADisplayLink *displayLink;
@@ -38,7 +38,7 @@
     _loaderView = [[GRBubble alloc] initWithFrame:CGRectMake(0, 0, viewSize, viewSize)];
     _loaderView.status = GRBubbleFalling;
     _loaderView.center = CGPointMake(self.view.center.x, 140);
-    _loaderView.layer.borderColor = CORAL.CGColor; _loaderView.layer.borderWidth = 6; _loaderView.layer.cornerRadius = _loaderView.frame.size.width/2;
+    _loaderView.layer.borderColor = CORAL.CGColor; _loaderView.layer.borderWidth = BORDER_WIDTH; _loaderView.layer.cornerRadius = _loaderView.frame.size.width/2;
     _loaderView.layer.contents = (__bridge id)[UIImage imageNamed:@"loading"].CGImage;
     _loaderView.layer.masksToBounds = YES;
     [self.view addSubview:_loaderView];
@@ -69,7 +69,7 @@
             GRBubble *bubble = [[GRBubble alloc] initWithFrame:CGRectMake(center.x - DEFAULT_TOUCH_SIZE/2, center.y - DEFAULT_TOUCH_SIZE/2, DEFAULT_TOUCH_SIZE, DEFAULT_TOUCH_SIZE)];
             bubble.layer.masksToBounds = YES;
             bubble.status = GRBubbleExpanding;
-            bubble.layer.borderColor = CORAL.CGColor; bubble.layer.borderWidth = 6; bubble.layer.cornerRadius = bubble.frame.size.width/2;
+            bubble.layer.borderColor = CORAL.CGColor; bubble.layer.borderWidth = BORDER_WIDTH; bubble.layer.cornerRadius = bubble.frame.size.width/2;
             [self.view addSubview:bubble];
             [_bubbles addObject:bubble];
             break;
@@ -97,7 +97,7 @@
                 [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                     if (bubble != otherBubble) {
                         //check if intersection with anyother bubble
-                        if ([self bubble:bubble intersects:otherBubble]) {
+                        if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
                             intersection = YES;
                             *stop = YES;
                         }
@@ -120,13 +120,20 @@
             [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                 if (bubble != otherBubble) {
                     //check if intersection with anyother bubble
-                    if ([self bubble:bubble intersects:otherBubble]) {
+                    if ([self bubble:bubble intersects:otherBubble elasticCollision:YES]) {
                         intersection = YES;
                         *stop = YES;
                     }
                 }
             }];
-            if (intersection || bubble.center.y + bubble.frame.size.height/2 > self.view.frame.size.height) {
+            if (intersection) {
+                bubble.status = GRBubbleStill;
+
+            }
+            else if (bubble.center.y + bubble.frame.size.height/2 > self.view.frame.size.height) {
+                [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+                    bubble.frame = CGRectMake(bubble.frame.origin.x, self.view.frame.size.height - bubble.frame.size.height, bubble.frame.size.width, bubble.frame.size.height);
+                } completion:nil];
                 bubble.status = GRBubbleStill;
             }
             else {
@@ -137,21 +144,40 @@
     }];
 }
 
-- (BOOL)bubble:(GRBubble *)bubble intersects:(GRBubble *)otherBubble {
-    //check top
+- (BOOL)bubble:(GRBubble *)bubble intersects:(GRBubble *)otherBubble elasticCollision:(BOOL)elasticCollision {
     CGPoint bubbleCenter = bubble.center;
     CGPoint otherBubbleCenter = otherBubble.center;
-    float bubbleRadius = bubble.frame.size.width/2;
-    float otherBubbleRadius = otherBubble.frame.size.width/2;
+    float bubbleRadius = bubble.frame.size.width/2 - BORDER_WIDTH/2;
+    float otherBubbleRadius = otherBubble.frame.size.width/2 - BORDER_WIDTH/2;
     //find hypotenuse
     float hypotenuse = sqrtf(powf(bubbleCenter.x - otherBubbleCenter.x, 2) + powf(bubbleCenter.y - otherBubbleCenter.y, 2));
+    BOOL intersect = hypotenuse < bubbleRadius + otherBubbleRadius;
+    if (intersect && elasticCollision) {
+        float newHypotenuse = bubbleRadius + otherBubbleRadius;
+        //find angle and extrapolate
+        CGFloat angle = asin((otherBubbleCenter.y - bubbleCenter.y)/hypotenuse);
+        NSLog(@"angle:%f", angle * 57.2957795);
+        NSLog(@"cos:%f", cosf(angle));
+        NSLog(@"sin:%f", sinf(angle));
+        float dx = newHypotenuse * cosf(angle); // the new horizontal leg length
+        float dy = newHypotenuse * sinf(angle); // the new vertical leg length
+        NSLog(@"dx:%f", dx);
+        NSLog(@"dy:%f", dy);
+        [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:(newHypotenuse - hypotenuse)/10 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            bubble.center = CGPointMake(otherBubbleCenter.x - dx * (bubbleCenter.x > otherBubbleCenter.x ? -1: 1), otherBubbleCenter.y - dy);
+        } completion:nil];
+        bubble.status = GRBubbleStill;
+        
+        
+    }
     
-    return hypotenuse < bubbleRadius + otherBubbleRadius;
+    return intersect;
 }
 
 - (float)gravity:(GRBubble *)bubble {
     float distanceToBottom = self.view.frame.size.height - (bubble.center.y + bubble.frame.size.height/2);
-    return MAX(abs(sqrtf(abs(distanceToBottom)) - 1), 1);
+    //tested values
+    return 500/(.25 * (distanceToBottom + 25)) - 7 * -1;
 }
 
 
