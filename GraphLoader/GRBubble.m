@@ -8,9 +8,18 @@
 
 #import "GRBubble.h"
 
-#define GRAVITY 1
+#define GRAVITY 1.5
 
 @implementation GRBubble
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        _forces = [NSArray array];
+    }
+    return self;
+}
+
 - (NSComparisonResult)compareHeight:(GRBubble *)otherBubble {
     return self.center.y < otherBubble.center.y;
 }
@@ -20,6 +29,7 @@
 }
 
 - (GRForce *)weight {
+//    return [GRForce forceWithMagnitude:GRAVITY * M_PI * pow(self.radius, 2) direction:-90];
     return [GRForce forceWithMagnitude:GRAVITY * M_PI direction:-90];
 }
 

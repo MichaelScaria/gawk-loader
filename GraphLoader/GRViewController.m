@@ -172,8 +172,7 @@
                         float hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
                         CGFloat angle = ANGLE(otherBubbleCenter, bubbleCenter, hypotenuse);
                         CGFloat theta = M_PI_2 - angle;
-                        float hf = bubble.weight.magnitude * cos(angle);
-                        GRForce *force = [GRForce forceWithMagnitude:hf direction:TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0)];
+                        GRForce *force = [GRForce forceWithMagnitude:bubble.weight.magnitude * cos(angle) direction:TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0)];
                         [forces addObject:force];
                     }
                 }
@@ -188,7 +187,10 @@
     [_bubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
         if (bubble.status == GRBubbleFalling) {
             GRForce *netForce = [bubble getNetForce];
-            bubble.center = CGPointMake(bubble.center.x + netForce.dx, bubble.center.y + netForce.dy);
+//            NSLog(@"%@", netForce);
+            [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+                bubble.center = CGPointMake(bubble.center.x + netForce.dx, MIN(bubble.center.y + netForce.dy, self.view.frame.size.height - bubble.frame.size.height/2));
+            } completion:nil];
         }
     }];
     
