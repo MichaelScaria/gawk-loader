@@ -9,6 +9,8 @@
 #import <UIKit/UIKit.h>
 #import "GRForce.h"
 
+#define GRAVITY .001
+
 typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
     GRBubbleExpanding,
     GRBubbleFalling

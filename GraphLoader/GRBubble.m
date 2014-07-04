@@ -8,7 +8,7 @@
 
 #import "GRBubble.h"
 
-#define GRAVITY 2
+
 
 @implementation GRBubble
 
@@ -29,8 +29,8 @@
 }
 
 - (GRForce *)weight {
-//    return [GRForce forceWithMagnitude:GRAVITY * M_PI * pow(self.radius, 2) direction:-90];
-    return [GRForce forceWithMagnitude:GRAVITY * M_PI direction:-90];
+    return [GRForce forceWithMagnitude:GRAVITY * M_PI * pow(self.radius, 2) direction:-90];
+//    return [GRForce forceWithMagnitude:GRAVITY * M_PI direction:-90];
 }
 
 - (GRForce *)getNetForce {

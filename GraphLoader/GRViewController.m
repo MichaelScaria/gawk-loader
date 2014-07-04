@@ -25,7 +25,7 @@
 @interface GRViewController ()
 @property (nonatomic, strong) CADisplayLink *displayLink;
 @property (nonatomic, strong) NSMutableArray *bubbles;
-//@property (nonatomic, strong) NSMutableArray *sortedBubbles;
+@property (nonatomic, strong) NSMutableArray *sortedBubbles;
 @property (nonatomic, strong) GRBubble *loaderView;
 
 //@property (nonatomic, strong) UIDynamicAnimator *animator;
@@ -40,7 +40,7 @@
 {
     [super viewDidLoad];
     _bubbles = [[NSMutableArray alloc] init];
-//    _sortedBubbles = [[NSMutableArray alloc] init];
+    _sortedBubbles = [[NSMutableArray alloc] init];
     self.view.backgroundColor = OFFWHITE;
     int viewSize = 170;
     _loaderView = [[GRBubble alloc] initWithFrame:CGRectMake(0, 0, viewSize, viewSize)];
@@ -51,7 +51,7 @@
     _loaderView.layer.masksToBounds = YES;
     [self.view addSubview:_loaderView];
     [_bubbles addObject:_loaderView];
-//    [_sortedBubbles addObject:_loaderView];
+    [_sortedBubbles addObject:_loaderView];
 
     UILongPressGestureRecognizer *recognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(createBubble:)];
     recognizer.minimumPressDuration = .05;
@@ -62,7 +62,7 @@
     [super viewDidAppear:animated];
     if (!_displayLink) _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(animate)];
     [_displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
-    
+    lastUpdate = _displayLink.timestamp;
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -92,7 +92,7 @@
                 bubble.layer.borderColor = CORAL.CGColor; bubble.layer.borderWidth = BORDER_WIDTH; bubble.layer.cornerRadius = bubble.frame.size.width/2;
                 [self.view addSubview:bubble];
                 [_bubbles addObject:bubble];
-//                [_sortedBubbles addObject:bubble];
+                [_sortedBubbles addObject:bubble];
             }
             break;
         }
@@ -112,8 +112,8 @@
 
 - (void)animate {
     //sort all the bubbles out
-    NSArray *reversedBubbles = [[_bubbles reverseObjectEnumerator] allObjects];
-    [reversedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
+    _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
+    [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
         if (bubble.status == GRBubbleExpanding) {
             if (CGRectContainsRect(self.view.frame, bubble.frame)) {
                 __block BOOL intersection= NO;
@@ -137,9 +137,8 @@
             }
             
         }
-        else if (bubble.status == GRBubbleFalling) {
-            // bubble is falling
-            [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+        if (bubble.status == GRBubbleFalling) {
+            /*[_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                 if (bubble != otherBubble) {
                     //check if intersection with any other bubble
                     if ([self bubble:bubble intersects:otherBubble elasticCollision:YES]) {
@@ -152,12 +151,30 @@
                 [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
                     bubble.frame = CGRectMake(bubble.frame.origin.x, self.view.frame.size.height - bubble.frame.size.height, bubble.frame.size.width, bubble.frame.size.height);
                 } completion:nil];
-            }
+            }*/
+            
+            
             NSMutableArray *forces = [[NSMutableArray alloc] initWithCapacity:_bubbles.count];
-            [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+            //limit within boundaries
+//            int threshold = 10;
+//            if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2 + threshold) {
+//                NSLog(@"%f - %f", bubble.center.y, self.view.frame.size.height - bubble.frame.size.height/2);
+//                bubble.center = CGPointMake(MIN(MAX(bubble.center.x, bubble.frame.size.width/2 + threshold), self.view.frame.size.width - bubble.frame.size.width/2 - threshold), MIN(bubble.center.y, self.view.frame.size.height - bubble.frame.size.height/2));
+//                NSLog(@"%f - %f", bubble.center.y, self.view.frame.size.height - bubble.frame.size.height/2);
+//            }
+            
+//            bubble.frame = CGRectMake(MIN(self.view.frame.size.width - bubble.frame.size.width, bubble.frame.origin.x), MIN(self.view.frame.size.height - bubble.frame.size.height, bubble.frame.origin.y), bubble.frame.size.width, bubble.frame.size.height);
+            [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                 if (bubble != otherBubble && otherBubble.status == GRBubbleFalling) {
+                    //remove entropy
+                    //bubbles push up, so only push bubbles above current
+                    if (bubble.center.y >= otherBubble.center.y) {
+                        //otherBubble needs to move if intersection
+                        [self bubble:otherBubble intersects:bubble elasticCollision:YES];
+                    }
+                    
+                    //add forces acting on bubble
                     if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
-                        //add forces
                         CGPoint bubbleCenter = bubble.center;
                         CGPoint otherBubbleCenter = otherBubble.center;
                         float hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
@@ -168,35 +185,45 @@
                         [forces addObject:force];
                     }
                 }
+                
             }];
+            //add forces for boundaries
+            //bottom
+            if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
+                [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:90]];
+            }
+            //left
+            if (bubble.center.x < bubble.frame.size.width/2) {
+                [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:0]];
+            }
+            //right
+            if (bubble.center.x > self.view.frame.size.width - bubble.frame.size.width/2) {
+                [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:180]];
+            }
             bubble.forces = (NSArray *)forces;
 
         }
         
     }];
     
+    
     //sum up all forces
     [_bubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
         if (bubble.status == GRBubbleFalling) {
             GRForce *netForce = [bubble getNetForce];
-            if (fabs(netForce.direction) == 90)  NSLog(@"%@", netForce);
-            
-            [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            //delta is 1/2 acceleration * timeElasped^2
+            //f=ma, a = f/(pi*r^2)
+            NSLog(@"%f", netForce.dy);
+            CFTimeInterval td = pow(_displayLink.timestamp - lastUpdate, 2);
+            bubble.center = CGPointMake(bubble.center.x + (netForce.dx * td)/(2 * M_PI * pow(bubble.radius, 2)), bubble.center.y + (netForce.dy * td)/(2 * M_PI * pow(bubble.radius, 2)));
+            NSLog(@"%@", NSStringFromCGPoint(bubble.center));
+//            [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
 //                bubble.center = CGPointMake(MIN(MAX(bubble.center.x + netForce.dx, bubble.frame.size.width/2), self.view.frame.size.width - bubble.frame.size.width/2), MIN(bubble.center.y + netForce.dy, self.view.frame.size.height - bubble.frame.size.height/2));
-                bubble.center = CGPointMake(MIN(MAX(bubble.center.x + netForce.dx, bubble.frame.size.width/2), self.view.frame.size.width - bubble.frame.size.width/2), MIN(bubble.center.y + netForce.dy, self.view.frame.size.height - bubble.frame.size.height/2));
 
-            } completion:nil];
+//            } completion:nil];
         }
     }];
-    
-    
-    //equate weight
-//    _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
-//    for (int i = 0; i < _sortedBubbles.count - 1; i++) {
-//        GRBubble *bubble = _sortedBubbles[i];
-//        GRBubble *otherBubble = _sortedBubbles[i+1];
-//        [self distributeBubbleWeight:bubble otherBubble:otherBubble];
-//    }
+    lastUpdate = _displayLink.timestamp;
 
 }
 
@@ -227,7 +254,7 @@
         else {
             [bubble removeFromSuperview];
             [_bubbles removeObject:bubble];
-//            [_sortedBubbles addObject:bubble];
+            [_sortedBubbles addObject:bubble];
         }
         
         

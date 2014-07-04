@@ -8,6 +8,8 @@
 
 #import <UIKit/UIKit.h>
 
-@interface GRViewController : UIViewController
+@interface GRViewController : UIViewController {
+    CFTimeInterval lastUpdate;
+}
 
 @end
