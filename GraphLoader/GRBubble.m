@@ -8,7 +8,7 @@
 
 #import "GRBubble.h"
 
-#define GRAVITY 1.5
+#define GRAVITY 2
 
 @implementation GRBubble
 
