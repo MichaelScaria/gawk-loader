@@ -33,7 +33,7 @@
 }
 
 - (GRForce *)weight {
-    return [GRForce forceWithMagnitude:GRAVITY * [self mass] direction:-90];
+    return [GRForce forceWithFx:0 fy:GRAVITY * [self mass]];
 }
 
 - (GRForce *)getNetForce {

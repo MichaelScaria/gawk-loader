@@ -9,7 +9,7 @@
 #import <UIKit/UIKit.h>
 #import "GRForce.h"
 
-#define GRAVITY 17
+#define GRAVITY 55
 
 typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
     GRBubbleExpanding,

@@ -16,7 +16,7 @@
 #define DEFAULT_TOUCH_SIZE 40
 #define RATE_OF_EXPANSION -1
 #define BORDER_WIDTH 6
-#define TO_DEGREES(radians) radians * 57.2957795
+#define TO_DEGREES(radians) (radians * 180) / M_PI
 
 #define HYPOTENUSE(bubbleCenter, otherBubbleCenter) sqrtf(powf(bubbleCenter.x - otherBubbleCenter.x, 2) + powf(bubbleCenter.y - otherBubbleCenter.y, 2))
 #define ANGLE(otherBubbleCenter, bubbleCenter, hypotenuse) asin((otherBubbleCenter.y - bubbleCenter.y)/hypotenuse);
@@ -49,6 +49,7 @@
     _loaderView.layer.borderColor = CORAL.CGColor; _loaderView.layer.borderWidth = BORDER_WIDTH; _loaderView.layer.cornerRadius = _loaderView.frame.size.width/2;
     _loaderView.layer.contents = (__bridge id)[UIImage imageNamed:@"loading"].CGImage;
     _loaderView.layer.masksToBounds = YES;
+    _loaderView.vy = 50;
     [self.view addSubview:_loaderView];
     [_bubbles addObject:_loaderView];
     [_sortedBubbles addObject:_loaderView];
@@ -178,11 +179,13 @@
                     if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
                         CGPoint bubbleCenter = bubble.center;
                         CGPoint otherBubbleCenter = otherBubble.center;
-                        float hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
-                        CGFloat angle = ANGLE(otherBubbleCenter, bubbleCenter, hypotenuse);
+                        CGFloat hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
+                        CGFloat angle = ANGLE(bubbleCenter, otherBubbleCenter, hypotenuse);
+                        NSLog(@"ANGLE:%f", angle);
                         CGFloat theta = M_PI_2 - angle;
-                        NSLog(@"%f with %f", bubble.frame.size.width, TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0));
-                        GRForce *force = [GRForce forceWithMagnitude:bubble.weight.magnitude * cos(theta) direction:TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0)];
+                        CGFloat forceMagnitude = bubble.mass * cos(theta);
+//                        NSLog(@"%f with %f", bubble.frame.size.width, TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0));
+                        GRForce *force = [GRForce forceWithFx:forceMagnitude * cos(angle) * (bubbleCenter.x > otherBubbleCenter.x ? -1 : 1) fy:forceMagnitude * sin(angle) * (angle > 0 ? -1 : 1)];
                         [forces addObject:force];
                     }
                 }
@@ -192,7 +195,7 @@
             //bottom
             if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
                 bubble.vy = 0;
-                [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:90]];
+                [forces addObject:[GRForce forceWithFx:0 fy:GRAVITY * bubble.mass]];
                 /*float timeOfImpact = .01;
                 //∆momentum/time = force
                 NSLog(@"NORMAL FORCE:%f", (bubble.mass * bubble.vy)/timeOfImpact);
@@ -200,11 +203,14 @@
             }
             //left
             if (bubble.center.x < bubble.frame.size.width/2) {
-                [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:0]];
+                [forces addObject:[GRForce forceWithFx:GRAVITY * bubble.mass fy:0]];
             }
             //right
-            if (bubble.center.x > self.view.frame.size.width - bubble.frame.size.width/2) {
-                [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:180]];
+            else if (bubble.center.x > self.view.frame.size.width - bubble.frame.size.width/2) {
+                [forces addObject:[GRForce forceWithFx:GRAVITY * bubble.mass * -1 fy:0]];
+            }
+            else {
+                bubble.vx = sqrt(abs(bubble.vx));
             }
             bubble.forces = (NSArray *)forces;
 
@@ -219,12 +225,12 @@
             GRForce *netForce = [bubble getNetForce];
             //delta is 1/2 acceleration * timeElasped^2
             //f=ma, a = f/(pi*r^2)
-            NSLog(@"DY:%f", netForce.dy);
+            NSLog(@"FY:%f", netForce.fy);
             CFTimeInterval td = _displayLink.timestamp - lastUpdate;
             NSLog(@"time:%f", td);
             //vf = vi + a*∆t
-            bubble.vx = bubble.vx + (netForce.dx/(M_PI * pow(bubble.radius, 2))) * td;
-            bubble.vy = bubble.vy + (netForce.dy/(M_PI * pow(bubble.radius, 2))) * td;
+            bubble.vx = bubble.vx + (netForce.fx/(bubble.mass)) * td;
+            bubble.vy = bubble.vy + (netForce.fy/(bubble.mass)) * td;
             //xf = xi + v*∆t
             bubble.center = CGPointMake(bubble.center.x + bubble.vx * td, bubble.center.y + bubble.vy * td);
 
