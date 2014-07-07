@@ -62,7 +62,6 @@
     [super viewDidAppear:animated];
     if (!_displayLink) _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(animate)];
     [_displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
-    lastUpdate = _displayLink.timestamp;
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -111,6 +110,8 @@
 
 
 - (void)animate {
+    if (lastUpdate == 0) lastUpdate = _displayLink.timestamp;
+
     //sort all the bubbles out
     _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
     [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
@@ -190,7 +191,12 @@
             //add forces for boundaries
             //bottom
             if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
+                bubble.vy = 0;
                 [forces addObject:[GRForce forceWithMagnitude:bubble.weight.magnitude direction:90]];
+                /*float timeOfImpact = .01;
+                //∆momentum/time = force
+                NSLog(@"NORMAL FORCE:%f", (bubble.mass * bubble.vy)/timeOfImpact);
+                [forces addObject:[GRForce forceWithMagnitude:(bubble.mass * bubble.vy)/timeOfImpact direction:90]];*/
             }
             //left
             if (bubble.center.x < bubble.frame.size.width/2) {
@@ -213,14 +219,17 @@
             GRForce *netForce = [bubble getNetForce];
             //delta is 1/2 acceleration * timeElasped^2
             //f=ma, a = f/(pi*r^2)
-            NSLog(@"%f", netForce.dy);
-            CFTimeInterval td = pow(_displayLink.timestamp - lastUpdate, 2);
-            bubble.center = CGPointMake(bubble.center.x + (netForce.dx * td)/(2 * M_PI * pow(bubble.radius, 2)), bubble.center.y + (netForce.dy * td)/(2 * M_PI * pow(bubble.radius, 2)));
-            NSLog(@"%@", NSStringFromCGPoint(bubble.center));
-//            [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-//                bubble.center = CGPointMake(MIN(MAX(bubble.center.x + netForce.dx, bubble.frame.size.width/2), self.view.frame.size.width - bubble.frame.size.width/2), MIN(bubble.center.y + netForce.dy, self.view.frame.size.height - bubble.frame.size.height/2));
+            NSLog(@"DY:%f", netForce.dy);
+            CFTimeInterval td = _displayLink.timestamp - lastUpdate;
+            NSLog(@"time:%f", td);
+            //vf = vi + a*∆t
+            bubble.vx = bubble.vx + (netForce.dx/(M_PI * pow(bubble.radius, 2))) * td;
+            bubble.vy = bubble.vy + (netForce.dy/(M_PI * pow(bubble.radius, 2))) * td;
+            //xf = xi + v*∆t
+            bubble.center = CGPointMake(bubble.center.x + bubble.vx * td, bubble.center.y + bubble.vy * td);
 
-//            } completion:nil];
+            NSLog(@"%@", NSStringFromCGPoint(bubble.center));
+
         }
     }];
     lastUpdate = _displayLink.timestamp;

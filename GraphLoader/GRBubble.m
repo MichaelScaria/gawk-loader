@@ -28,9 +28,12 @@
     return self.frame.size.width/2 - (self.layer.borderWidth - 3);
 }
 
+- (CGFloat)mass {
+    return M_PI * pow(self.radius, 2);
+}
+
 - (GRForce *)weight {
-    return [GRForce forceWithMagnitude:GRAVITY * M_PI * pow(self.radius, 2) direction:-90];
-//    return [GRForce forceWithMagnitude:GRAVITY * M_PI direction:-90];
+    return [GRForce forceWithMagnitude:GRAVITY * [self mass] direction:-90];
 }
 
 - (GRForce *)getNetForce {
