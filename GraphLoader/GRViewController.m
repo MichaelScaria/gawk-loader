@@ -158,14 +158,7 @@
             
             NSMutableArray *forces = [[NSMutableArray alloc] initWithCapacity:_bubbles.count];
             //limit within boundaries
-//            int threshold = 10;
-//            if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2 + threshold) {
-//                NSLog(@"%f - %f", bubble.center.y, self.view.frame.size.height - bubble.frame.size.height/2);
-//                bubble.center = CGPointMake(MIN(MAX(bubble.center.x, bubble.frame.size.width/2 + threshold), self.view.frame.size.width - bubble.frame.size.width/2 - threshold), MIN(bubble.center.y, self.view.frame.size.height - bubble.frame.size.height/2));
-//                NSLog(@"%f - %f", bubble.center.y, self.view.frame.size.height - bubble.frame.size.height/2);
-//            }
-            
-//            bubble.frame = CGRectMake(MIN(self.view.frame.size.width - bubble.frame.size.width, bubble.frame.origin.x), MIN(self.view.frame.size.height - bubble.frame.size.height, bubble.frame.origin.y), bubble.frame.size.width, bubble.frame.size.height);
+
             [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                 if (bubble != otherBubble && otherBubble.status == GRBubbleFalling) {
                     //remove entropy
@@ -195,11 +188,8 @@
             //bottom
             if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
                 bubble.vy = 0;
-                [forces addObject:[GRForce forceWithFx:0 fy:GRAVITY * bubble.mass]];
-                /*float timeOfImpact = .01;
-                //∆momentum/time = force
-                NSLog(@"NORMAL FORCE:%f", (bubble.mass * bubble.vy)/timeOfImpact);
-                [forces addObject:[GRForce forceWithMagnitude:(bubble.mass * bubble.vy)/timeOfImpact direction:90]];*/
+                GRForce *force = [bubble getNetForce];
+                [forces addObject:[GRForce forceWithFx:force.fx * -1 fy:force.fy * -1]];
             }
             //left
             if (bubble.center.x < bubble.frame.size.width/2) {
