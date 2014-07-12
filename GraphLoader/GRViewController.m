@@ -42,12 +42,13 @@
     _bubbles = [[NSMutableArray alloc] init];
     _sortedBubbles = [[NSMutableArray alloc] init];
     self.view.backgroundColor = OFFWHITE;
+//    self.view.backgroundColor = [UIColor greenColor];
     int viewSize = 170;
     _loaderView = [[GRBubble alloc] initWithFrame:CGRectMake(0, 0, viewSize, viewSize)];
     _loaderView.status = GRBubbleFalling;
     _loaderView.center = CGPointMake(self.view.center.x, 140);
     _loaderView.layer.borderColor = CORAL.CGColor; _loaderView.layer.borderWidth = BORDER_WIDTH; _loaderView.layer.cornerRadius = _loaderView.frame.size.width/2;
-    _loaderView.layer.contents = (__bridge id)[UIImage imageNamed:@"loading"].CGImage;
+    _loaderView.layer.contents = (__bridge id)([UIImage imageNamed:@"loading"].CGImage);
     _loaderView.layer.masksToBounds = YES;
     _loaderView.vy = 50;
     [self.view addSubview:_loaderView];
@@ -57,6 +58,8 @@
     UILongPressGestureRecognizer *recognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(createBubble:)];
     recognizer.minimumPressDuration = .05;
     [self.view addGestureRecognizer:recognizer];
+    
+    percent = .25;
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -116,6 +119,7 @@
     //sort all the bubbles out
     _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
     [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
+        bubble.percent = percent;
         if (bubble.status == GRBubbleExpanding) {
             if (CGRectContainsRect(self.view.frame, bubble.frame)) {
                 __block BOOL intersection= NO;
@@ -140,20 +144,6 @@
             
         }
         if (bubble.status == GRBubbleFalling) {
-            /*[_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
-                if (bubble != otherBubble) {
-                    //check if intersection with any other bubble
-                    if ([self bubble:bubble intersects:otherBubble elasticCollision:YES]) {
-                        *stop = YES;
-                    }
-                }
-            }];
-            
-            if (bubble.center.y + bubble.frame.size.height/2 > self.view.frame.size.height) {
-                [UIView animateWithDuration:.7 delay:0 usingSpringWithDamping:.6 initialSpringVelocity:0 options:UIViewAnimationOptionCurveEaseOut animations:^{
-                    bubble.frame = CGRectMake(bubble.frame.origin.x, self.view.frame.size.height - bubble.frame.size.height, bubble.frame.size.width, bubble.frame.size.height);
-                } completion:nil];
-            }*/
             
             
             NSMutableArray *forces = [[NSMutableArray alloc] initWithCapacity:_bubbles.count];
@@ -227,7 +217,9 @@
             NSLog(@"%@", NSStringFromCGPoint(bubble.center));
 
         }
+        [bubble setNeedsDisplay];
     }];
+    [self.view setNeedsDisplay];
     lastUpdate = _displayLink.timestamp;
 
 }

@@ -9,7 +9,7 @@
 #import <UIKit/UIKit.h>
 #import "GRForce.h"
 
-#define GRAVITY 55
+#define GRAVITY 85
 
 typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
     GRBubbleExpanding,
@@ -25,6 +25,7 @@ typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
 @property (nonatomic, strong) GRForce *weight;
 @property (nonatomic, assign) float vx;
 @property (nonatomic, assign) float vy;
+@property (nonatomic, assign) float percent;
 
 - (CGFloat)mass;
 - (GRForce *)getNetForce;

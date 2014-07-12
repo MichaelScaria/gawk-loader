@@ -10,6 +10,7 @@
 
 @interface GRViewController : UIViewController {
     CFTimeInterval lastUpdate;
+    float percent;
 }
 
 @end

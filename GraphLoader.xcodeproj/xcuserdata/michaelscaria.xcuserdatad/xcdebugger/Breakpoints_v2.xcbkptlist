@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "GraphLoader/GRViewController.m"
-            timestampString = "426403847.634709"
+            timestampString = "426844028.057681"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "241"
-            endingLineNumber = "241"
+            startingLineNumber = "244"
+            endingLineNumber = "244"
             landmarkName = "-bubble:intersects:elasticCollision:"
             landmarkType = "5">
          </BreakpointContent>
@@ -26,12 +26,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "GraphLoader/GRViewController.m"
-            timestampString = "426403847.634709"
+            timestampString = "426844028.057681"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "224"
-            endingLineNumber = "224"
-            landmarkName = "-animate"
+            startingLineNumber = "227"
+            endingLineNumber = "227"
+            landmarkName = "-bubble:intersects:elasticCollision:"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
