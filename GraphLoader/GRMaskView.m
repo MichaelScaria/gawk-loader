@@ -14,7 +14,7 @@
 
 
 @implementation GRMaskView
-- (void)drawRect:(CGRect)rect {
+/*- (void)drawRect:(CGRect)rect {
     for (UIView *subview in self.subviews) subview.alpha = 1;
     CGContextRef context = UIGraphicsGetCurrentContext();
     [self.layer renderInContext:context];
@@ -32,5 +32,5 @@
     }
     for (UIView *subview in self.subviews) subview.alpha = 0;
 
-}
+}*/
 @end

@@ -59,7 +59,6 @@
     recognizer.minimumPressDuration = .05;
     [self.view addGestureRecognizer:recognizer];
     
-    percent = .25;
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -117,9 +116,9 @@
     if (lastUpdate == 0) lastUpdate = _displayLink.timestamp;
 
     //sort all the bubbles out
+    //TODO:NSEnumerationReverse
     _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
     [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
-        bubble.percent = percent;
         if (bubble.status == GRBubbleExpanding) {
             if (CGRectContainsRect(self.view.frame, bubble.frame)) {
                 __block BOOL intersection= NO;
@@ -136,6 +135,7 @@
                     bubble.frame = CGRectInset(bubble.frame, RATE_OF_EXPANSION, RATE_OF_EXPANSION);
                     bubble.layer.cornerRadius = bubble.frame.size.width/2;
                 }
+                else bubble.status = GRBubbleFalling;
                 
             }
             else {
@@ -178,8 +178,11 @@
             //bottom
             if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
                 bubble.vy = 0;
-                GRForce *force = [bubble getNetForce];
-                [forces addObject:[GRForce forceWithFx:force.fx * -1 fy:force.fy * -1]];
+                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight]];
+                [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:currentNetForce.fy * -1]];
+            }
+            else {
+                NSLog(@"else");
             }
             //left
             if (bubble.center.x < bubble.frame.size.width/2) {
@@ -205,7 +208,6 @@
             GRForce *netForce = [bubble getNetForce];
             //delta is 1/2 acceleration * timeElasped^2
             //f=ma, a = f/(pi*r^2)
-            NSLog(@"FY:%f", netForce.fy);
             CFTimeInterval td = _displayLink.timestamp - lastUpdate;
             NSLog(@"time:%f", td);
             //vf = vi + a*∆t

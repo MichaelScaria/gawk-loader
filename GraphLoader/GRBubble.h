@@ -25,7 +25,6 @@ typedef NS_ENUM(NSUInteger, GRBubbleStatus) {
 @property (nonatomic, strong) GRForce *weight;
 @property (nonatomic, assign) float vx;
 @property (nonatomic, assign) float vy;
-@property (nonatomic, assign) float percent;
 
 - (CGFloat)mass;
 - (GRForce *)getNetForce;
