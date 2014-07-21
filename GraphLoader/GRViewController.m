@@ -56,7 +56,7 @@
     [_sortedBubbles addObject:_loaderView];
 
     UILongPressGestureRecognizer *recognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(createBubble:)];
-    recognizer.minimumPressDuration = .05;
+    recognizer.minimumPressDuration = .0075;
     [self.view addGestureRecognizer:recognizer];
     
 }
@@ -153,10 +153,10 @@
                 if (bubble != otherBubble && otherBubble.status == GRBubbleFalling) {
                     //remove entropy
                     //bubbles push up, so only push bubbles above current
-                    if (bubble.center.y >= otherBubble.center.y) {
+//                    if (bubble.center.y >= otherBubble.center.y) {
                         //otherBubble needs to move if intersection
-                        [self bubble:otherBubble intersects:bubble elasticCollision:YES];
-                    }
+//                        [self bubble:otherBubble intersects:bubble elasticCollision:YES];
+//                    }
                     
                     //add forces acting on bubble
                     if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
@@ -164,10 +164,8 @@
                         CGPoint otherBubbleCenter = otherBubble.center;
                         CGFloat hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
                         CGFloat angle = ANGLE(bubbleCenter, otherBubbleCenter, hypotenuse);
-                        NSLog(@"ANGLE:%f", angle);
                         CGFloat theta = M_PI_2 - angle;
-                        CGFloat forceMagnitude = bubble.mass * cos(theta);
-//                        NSLog(@"%f with %f", bubble.frame.size.width, TO_DEGREES(angle) + (bubble.center.x > otherBubble.center.x ? (90 * angle > 0 ? 1 : -1) : 0));
+                        CGFloat forceMagnitude = [bubble verticalForcesGoingUp:angle > 0] * cos(theta);
                         GRForce *force = [GRForce forceWithFx:forceMagnitude * cos(angle) * (bubbleCenter.x > otherBubbleCenter.x ? -1 : 1) fy:forceMagnitude * sin(angle) * (angle > 0 ? -1 : 1)];
                         [forces addObject:force];
                     }
@@ -178,22 +176,18 @@
             //bottom
             if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
                 bubble.vy = 0;
-                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight]];
-                [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:currentNetForce.fy * -1]];
-            }
-            else {
-                NSLog(@"else");
+                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
+                [forces addObject:[GRForce forceWithFx:0 fy:currentNetForce.fy * -1]];
             }
             //left
             if (bubble.center.x < bubble.frame.size.width/2) {
-                [forces addObject:[GRForce forceWithFx:GRAVITY * bubble.mass fy:0]];
+                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
+                [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:0]];
             }
             //right
             else if (bubble.center.x > self.view.frame.size.width - bubble.frame.size.width/2) {
-                [forces addObject:[GRForce forceWithFx:GRAVITY * bubble.mass * -1 fy:0]];
-            }
-            else {
-                bubble.vx = sqrt(abs(bubble.vx));
+                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
+                [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:0]];
             }
             bubble.forces = (NSArray *)forces;
 
@@ -205,23 +199,28 @@
     //sum up all forces
     [_bubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
         if (bubble.status == GRBubbleFalling) {
+            NSLog(@"Diam:%f", bubble.radius * 2);
             GRForce *netForce = [bubble getNetForce];
             //delta is 1/2 acceleration * timeElasped^2
             //f=ma, a = f/(pi*r^2)
-            CFTimeInterval td = _displayLink.timestamp - lastUpdate;
+//            CFTimeInterval td = _displayLink.timestamp - lastUpdate;
+            CFTimeInterval td = .017; //FAKED
             NSLog(@"time:%f", td);
             //vf = vi + a*∆t
             bubble.vx = bubble.vx + (netForce.fx/(bubble.mass)) * td;
             bubble.vy = bubble.vy + (netForce.fy/(bubble.mass)) * td;
+            NSLog(@"Velocity:%f | %f", bubble.vx, bubble.vy);
             //xf = xi + v*∆t
-            bubble.center = CGPointMake(bubble.center.x + bubble.vx * td, bubble.center.y + bubble.vy * td);
+            if (!(isnan(bubble.vx) || isnan(bubble.vy))) {
+                bubble.center = CGPointMake(bubble.center.x + bubble.vx * td, bubble.center.y + bubble.vy * td);
+            }
 
             NSLog(@"%@", NSStringFromCGPoint(bubble.center));
 
         }
-        [bubble setNeedsDisplay];
+//        [bubble setNeedsDisplay];
     }];
-    [self.view setNeedsDisplay];
+//    [self.view setNeedsDisplay];
     lastUpdate = _displayLink.timestamp;
 
 }
@@ -264,12 +263,12 @@
 }
 
 
-- (float)gravity:(GRBubble *)bubble {
-    float distanceToBottom = self.view.frame.size.height - (bubble.center.y + bubble.frame.size.height/2);
-    //tested values
-    //TODO:take into account radius
-    return 500/(.25 * (distanceToBottom + 25)) - 7 * -1;
-}
+//- (float)gravity:(GRBubble *)bubble {
+//    float distanceToBottom = self.view.frame.size.height - (bubble.center.y + bubble.frame.size.height/2);
+//    //tested values
+//    //TODO:take into account radius
+//    return 500/(.25 * (distanceToBottom + 25)) - 7 * -1;
+//}
 
 
 @end

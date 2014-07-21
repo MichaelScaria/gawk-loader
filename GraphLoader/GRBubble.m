@@ -40,4 +40,15 @@
     return [GRForce sumForces:[_forces arrayByAddingObject:self.weight]];
 }
 
+- (CGFloat)verticalForcesGoingUp:(BOOL)up {
+    __block CGFloat total = 0;
+    NSLog(@"VDiam:%f", self.radius * 2);
+    [[_forces arrayByAddingObject:self.weight] enumerateObjectsUsingBlock:^(GRForce *force, NSUInteger idx, BOOL *stop) {
+        NSLog(@"VForce:%@", force);
+        if (force.fy * (up ? 1 : -1) < 0)
+            total += force.fy;
+    }];
+    
+    return total;
+}
 @end
