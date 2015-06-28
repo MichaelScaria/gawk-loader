@@ -64,7 +64,7 @@
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     if (!_displayLink) _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(animate)];
-    [_displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
+    [_displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes]; // http://stackoverflow.com/questions/7222449/nsdefaultrunloopmode-vs-nsrunloopcommonmodes - we want to run regardless of touches
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -81,7 +81,7 @@
             __block BOOL intersection= NO;
             [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
                 if (bubble != otherBubble) {
-                    //check if intersection with anyother bubble
+                    //check if intersection with any other bubble
                     if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
                         intersection = YES;
                         *stop = YES;
@@ -113,114 +113,124 @@
 
 
 - (void)animate {
-    if (lastUpdate == 0) lastUpdate = _displayLink.timestamp;
-
+    if (lastUpdate == 0)
+        lastUpdate = _displayLink.timestamp;
+    
     //sort all the bubbles out
     //TODO:NSEnumerationReverse
     _sortedBubbles = [[_sortedBubbles sortedArrayUsingSelector:NSSelectorFromString(@"compareHeight:")] mutableCopy];
+    
+//    CFTimeInterval startTime = CACurrentMediaTime();
     [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
-        if (bubble.status == GRBubbleExpanding) {
-            if (CGRectContainsRect(self.view.frame, bubble.frame)) {
-                __block BOOL intersection= NO;
-                [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
-                    if (bubble != otherBubble) {
-                        //check if intersection with anyother bubble
+        @autoreleasepool {
+            if (bubble.status == GRBubbleExpanding) {
+                if (CGRectContainsRect(self.view.frame, bubble.frame)) {
+                    __block BOOL intersection= NO;
+                    [_bubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+                        if (bubble != otherBubble) {
+                            //check if intersection with anyother bubble
+                            if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
+                                intersection = YES;
+                                *stop = YES;
+                            }
+                        }
+                    }];
+                    if (!intersection) {
+                        bubble.frame = CGRectInset(bubble.frame, RATE_OF_EXPANSION, RATE_OF_EXPANSION);
+                        bubble.layer.cornerRadius = bubble.frame.size.width/2;
+                    }
+                    else bubble.status = GRBubbleFalling;
+                    
+                }
+                else {
+                    bubble.status = GRBubbleFalling;
+                }
+                
+            }
+            // not else because current bubble status can change to falling
+            if (bubble.status == GRBubbleFalling) {
+                
+                
+                NSMutableArray *forces = [[NSMutableArray alloc] initWithCapacity:_bubbles.count];
+                NSMutableArray *intersectingBubbles = [[NSMutableArray alloc] init];
+                [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
+                    if (bubble != otherBubble && otherBubble.status == GRBubbleFalling) {
+                        
+                        //add forces acting on bubble
+                        //TODO: apply conservation of momentum
                         if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
-                            intersection = YES;
-                            *stop = YES;
+                            [intersectingBubbles addObject:otherBubble];
+                            CGPoint bubbleCenter = bubble.center;
+                            CGPoint otherBubbleCenter = otherBubble.center;
+                            CGFloat hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
+                            CGFloat angle = ANGLE(bubbleCenter, otherBubbleCenter, hypotenuse);
+                            CGFloat theta = M_PI_2 - angle;
+                            CGFloat forceMagnitude = [bubble verticalForcesGoingUp:angle > 0] * cos(theta);
+                            GRForce *force = [GRForce forceWithFx:forceMagnitude * cos(angle) * (bubbleCenter.x > otherBubbleCenter.x ? -1 : 1) fy:forceMagnitude * sin(angle) * (angle < 0 ? -1 : 1)];
+                            [forces addObject:force];
                         }
                     }
-                }];
-                if (!intersection) {
-                    bubble.frame = CGRectInset(bubble.frame, RATE_OF_EXPANSION, RATE_OF_EXPANSION);
-                    bubble.layer.cornerRadius = bubble.frame.size.width/2;
-                }
-                else bubble.status = GRBubbleFalling;
-                
-            }
-            else {
-                bubble.status = GRBubbleFalling;
-            }
-            
-        }
-        if (bubble.status == GRBubbleFalling) {
-            
-            
-            NSMutableArray *forces = [[NSMutableArray alloc] initWithCapacity:_bubbles.count];
-            //limit within boundaries
-
-            [_sortedBubbles enumerateObjectsUsingBlock:^(GRBubble *otherBubble, NSUInteger idx, BOOL *stop) {
-                if (bubble != otherBubble && otherBubble.status == GRBubbleFalling) {
-                    //remove entropy
-                    //bubbles push up, so only push bubbles above current
-//                    if (bubble.center.y >= otherBubble.center.y) {
-                        //otherBubble needs to move if intersection
-//                        [self bubble:otherBubble intersects:bubble elasticCollision:YES];
-//                    }
                     
-                    //add forces acting on bubble
-                    if ([self bubble:bubble intersects:otherBubble elasticCollision:NO]) {
-                        CGPoint bubbleCenter = bubble.center;
-                        CGPoint otherBubbleCenter = otherBubble.center;
-                        CGFloat hypotenuse = HYPOTENUSE(bubbleCenter,otherBubbleCenter);
-                        CGFloat angle = ANGLE(bubbleCenter, otherBubbleCenter, hypotenuse);
-                        CGFloat theta = M_PI_2 - angle;
-                        CGFloat forceMagnitude = [bubble verticalForcesGoingUp:angle > 0] * cos(theta);
-                        GRForce *force = [GRForce forceWithFx:forceMagnitude * cos(angle) * (bubbleCenter.x > otherBubbleCenter.x ? -1 : 1) fy:forceMagnitude * sin(angle) * (angle > 0 ? -1 : 1)];
-                        [forces addObject:force];
-                    }
-                }
+                }];
                 
-            }];
-            //add forces for boundaries
-            //bottom
-            if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
-                bubble.vy = 0;
-                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
-                [forces addObject:[GRForce forceWithFx:0 fy:currentNetForce.fy * -1]];
+                
+                
+                //add forces for boundaries
+                //bottom
+                if (bubble.center.y > self.view.frame.size.height - bubble.frame.size.height/2) {
+                    bubble.vy = 0;
+                    //Ff = µ * Fn
+                    //TODO: Actually calculate friction
+                    if (bubble.vx > 0) bubble.vx -= .025;
+                    else if (bubble.vx < 0) bubble.vx += .025;
+                    GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
+                    [forces addObject:[GRForce forceWithFx:0 fy:currentNetForce.fy * -1]];
+                }
+                //left
+                if (bubble.center.x < bubble.frame.size.width/2) {
+                    bubble.vx = 0;
+                    GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
+                    [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:0]];
+                }
+                //right
+                else if (bubble.center.x > self.view.frame.size.width - bubble.frame.size.width/2) {
+                    bubble.vx = 0;
+                    GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
+                    [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:0]];
+                }
+                bubble.forces = (NSArray *)forces;
+                
             }
-            //left
-            if (bubble.center.x < bubble.frame.size.width/2) {
-                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
-                [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:0]];
-            }
-            //right
-            else if (bubble.center.x > self.view.frame.size.width - bubble.frame.size.width/2) {
-                GRForce *currentNetForce = [GRForce sumForces:[forces arrayByAddingObject:bubble.weight] logs:NO];
-                [forces addObject:[GRForce forceWithFx:currentNetForce.fx * -1 fy:0]];
-            }
-            bubble.forces = (NSArray *)forces;
-
         }
         
     }];
+//    CFTimeInterval endTime = CACurrentMediaTime();
+//    NSLog(@"Bubbles: %lu Total Runtime: %g s", (unsigned long)_sortedBubbles.count, endTime - startTime);
     
     
     //sum up all forces
     [_bubbles enumerateObjectsUsingBlock:^(GRBubble *bubble, NSUInteger idx, BOOL *stop) {
         if (bubble.status == GRBubbleFalling) {
-            NSLog(@"Diam:%f", bubble.radius * 2);
+//            NSLog(@"Diam:%f", bubble.radius * 2);
             GRForce *netForce = [bubble getNetForce];
             //delta is 1/2 acceleration * timeElasped^2
             //f=ma, a = f/(pi*r^2)
 //            CFTimeInterval td = _displayLink.timestamp - lastUpdate;
             CFTimeInterval td = .017; //FAKED
-            NSLog(@"time:%f", td);
-            //vf = vi + a*∆t
-            bubble.vx = bubble.vx + (netForce.fx/(bubble.mass)) * td;
-            bubble.vy = bubble.vy + (netForce.fy/(bubble.mass)) * td;
-            NSLog(@"Velocity:%f | %f", bubble.vx, bubble.vy);
+//            NSLog(@"time:%f", td);
+            //vf += (F ⋅ Δt) / m
+            bubble.vx += (netForce.fx * td)/bubble.mass;
+            bubble.vy += (netForce.fy * td)/bubble.mass;
+//            NSLog(@"Velocity:%f | %f", bubble.vx, bubble.vy);
             //xf = xi + v*∆t
             if (!(isnan(bubble.vx) || isnan(bubble.vy))) {
                 bubble.center = CGPointMake(bubble.center.x + bubble.vx * td, bubble.center.y + bubble.vy * td);
             }
 
-            NSLog(@"%@", NSStringFromCGPoint(bubble.center));
+//            NSLog(@"%@", NSStringFromCGPoint(bubble.center));
 
         }
-//        [bubble setNeedsDisplay];
     }];
-//    [self.view setNeedsDisplay];
     lastUpdate = _displayLink.timestamp;
 
 }

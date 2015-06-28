@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>7295F581-E3C1-4C13-BBDE-2D389A39BEC7</string>
+	<key>IDESourceControlProjectName</key>
+	<string>GraphLoader</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>703B78F3F1145652F36F1FD9828370C16A9BEF5B</key>
+		<string>bitbucket.org:michaelscaria/graph-loader.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>GraphLoader.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>703B78F3F1145652F36F1FD9828370C16A9BEF5B</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>bitbucket.org:michaelscaria/graph-loader.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>703B78F3F1145652F36F1FD9828370C16A9BEF5B</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>703B78F3F1145652F36F1FD9828370C16A9BEF5B</string>
+			<key>IDESourceControlWCCName</key>
+			<string>GraphLoader</string>
+		</dict>
+	</array>
+</dict>
+</plist>
