@@ -1,0 +1,1 @@
+I tried simulating gravity for bubbles you create by pressing down on the screen. Before iOS9, collision detection was only available for rectangular frames. This implementation is not complete.
